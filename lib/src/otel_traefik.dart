@@ -2,7 +2,6 @@
 // Copyright 2025-2026 Mindful Software LLC d/b/a Dartastic.io, All rights reserved.
 
 import 'package:dartastic_opentelemetry/dartastic_opentelemetry.dart';
-import 'package:dartastic_opentelemetry_api/dartastic_opentelemetry_api.dart';
 
 import 'otel_traefik_suppression.dart';
 
@@ -50,45 +49,56 @@ Future<T> tracedTraefik<T>({
   final t = tracer ?? OTel.tracerProvider().getTracer('otel_traefik');
   final span = t.startSpan('traefik $operation', kind: SpanKind.server);
   try {
-    span.setStringAttribute('http.route', '$operation');
+    span.addAttributes(
+        OTel.attributes([OTel.attributeString('http.route', operation)]));
     final r = await invoke();
     final res = r.result;
     if (res != null) {
       if (res.router != null) {
-        span.setStringAttribute('traefik.router', res.router!);
+        span.addAttributes(OTel.attributes(
+            [OTel.attributeString('traefik.router', res.router!)]));
       }
       if (res.serviceTarget != null) {
-        span.setStringAttribute('traefik.service', res.serviceTarget!);
+        span.addAttributes(OTel.attributes(
+            [OTel.attributeString('traefik.service', res.serviceTarget!)]));
       }
       if (res.entrypoint != null) {
-        span.setStringAttribute('traefik.entrypoint', res.entrypoint!);
+        span.addAttributes(OTel.attributes(
+            [OTel.attributeString('traefik.entrypoint', res.entrypoint!)]));
       }
       if (res.middleware != null) {
-        span.setStringAttribute('traefik.middleware', res.middleware!);
+        span.addAttributes(OTel.attributes(
+            [OTel.attributeString('traefik.middleware', res.middleware!)]));
       }
       if (res.upstreamHost != null) {
-        span.setStringAttribute('server.address', res.upstreamHost!);
+        span.addAttributes(OTel.attributes(
+            [OTel.attributeString('server.address', res.upstreamHost!)]));
       }
       if (res.upstreamUri != null) {
-        span.setStringAttribute('url.full', res.upstreamUri!);
+        span.addAttributes(OTel.attributes(
+            [OTel.attributeString('url.full', res.upstreamUri!)]));
       }
       if (res.provider != null) {
-        span.setStringAttribute('traefik.provider', res.provider!);
+        span.addAttributes(OTel.attributes(
+            [OTel.attributeString('traefik.provider', res.provider!)]));
       }
       if (res.statusCode != null) {
-        span.setIntAttribute('http.response.status_code', res.statusCode!);
+        span.addAttributes(OTel.attributes(
+            [OTel.attributeInt('http.response.status_code', res.statusCode!)]));
       }
       if (res.errorCode != null) {
-        span.setStringAttribute('traefik.error.code', res.errorCode!);
+        span.addAttributes(OTel.attributes(
+            [OTel.attributeString('traefik.error.code', res.errorCode!)]));
       }
-      final fail =
-          res.errorCode != null ||
+      final fail = res.errorCode != null ||
           (res.statusCode != null && res.statusCode! >= 400);
       if (fail) {
-        span.setStringAttribute(
-          ErrorResource.errorType.key,
-          res.errorCode ?? 'traefik.error',
-        );
+        span.addAttributes(OTel.attributes([
+          OTel.attributeString(
+            ErrorResource.errorType.key,
+            res.errorCode ?? 'traefik.error',
+          )
+        ]));
         span.setStatus(SpanStatusCode.Error, res.errorMessage);
       }
     }
