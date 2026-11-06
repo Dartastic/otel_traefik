@@ -1,11 +1,12 @@
-// Licensed under the Dartastic Pro Software License Agreement.
+// Licensed under the Apache License, Version 2.0
 // Copyright 2025-2026 Mindful Software LLC d/b/a Dartastic.io, All rights reserved.
 
-import 'package:dartastic_opentelemetry/dartastic_opentelemetry.dart';
+import 'package:dartastic_opentelemetry_api/dartastic_opentelemetry_api.dart';
 
 import 'otel_traefik_suppression.dart';
 
 class TraefikResult {
+  /// Creates a result.
   const TraefikResult({
     this.router,
     this.serviceTarget,
@@ -31,8 +32,13 @@ class TraefikResult {
   final String? errorMessage;
 }
 
+/// What a traced call returned: the value for the caller plus fields
+/// recorded on the span.
 class TraefikCallResult<T> {
+  /// Creates a call result.
   const TraefikCallResult({required this.value, this.result});
+
+  /// The value returned to the caller.
   final T value;
   final TraefikResult? result;
 }
@@ -40,62 +46,63 @@ class TraefikCallResult<T> {
 Future<T> tracedTraefik<T>({
   required String operation,
   required Future<TraefikCallResult<T>> Function() invoke,
-  Tracer? tracer,
+  APITracer? tracer,
 }) async {
   if (traefikInstrumentationSuppressed()) {
     final r = await invoke();
     return r.value;
   }
-  final t = tracer ?? OTel.tracerProvider().getTracer('otel_traefik');
+  final t = tracer ?? OTelAPI.tracerProvider().getTracer('otel_traefik');
   final span = t.startSpan('traefik $operation', kind: SpanKind.server);
   try {
     span.addAttributes(
-        OTel.attributes([OTel.attributeString('http.route', operation)]));
+        OTelAPI.attributes([OTelAPI.attributeString('http.route', operation)]));
     final r = await invoke();
     final res = r.result;
     if (res != null) {
       if (res.router != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('traefik.router', res.router!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('traefik.router', res.router!)]));
       }
       if (res.serviceTarget != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('traefik.service', res.serviceTarget!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('traefik.service', res.serviceTarget!)]));
       }
       if (res.entrypoint != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('traefik.entrypoint', res.entrypoint!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('traefik.entrypoint', res.entrypoint!)]));
       }
       if (res.middleware != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('traefik.middleware', res.middleware!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('traefik.middleware', res.middleware!)]));
       }
       if (res.upstreamHost != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('server.address', res.upstreamHost!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('server.address', res.upstreamHost!)]));
       }
       if (res.upstreamUri != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('url.full', res.upstreamUri!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('url.full', res.upstreamUri!)]));
       }
       if (res.provider != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('traefik.provider', res.provider!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('traefik.provider', res.provider!)]));
       }
       if (res.statusCode != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeInt('http.response.status_code', res.statusCode!)]));
+        span.addAttributes(OTelAPI.attributes([
+          OTelAPI.attributeInt('http.response.status_code', res.statusCode!)
+        ]));
       }
       if (res.errorCode != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('traefik.error.code', res.errorCode!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('traefik.error.code', res.errorCode!)]));
       }
       final fail = res.errorCode != null ||
           (res.statusCode != null && res.statusCode! >= 400);
       if (fail) {
-        span.addAttributes(OTel.attributes([
-          OTel.attributeString(
-            ErrorResource.errorType.key,
+        span.addAttributes(OTelAPI.attributes([
+          OTelAPI.attributeString(
+            ErrorAttributes.errorType.key,
             res.errorCode ?? 'traefik.error',
           )
         ]));
